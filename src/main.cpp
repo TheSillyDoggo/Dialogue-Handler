@@ -8,21 +8,9 @@ using namespace geode::prelude;
 std::string getExecutablePath() {
     std::string path;
 
-	#ifdef GEODE_IS_WINDOWS
-
     char buffer[MAX_PATH];
     GetModuleFileName(NULL, buffer, MAX_PATH);
     path = std::string(buffer);
-
-	#elif GEODE_IS_MACOS
-
-    char buffer[PATH_MAX];
-    uint32_t size = sizeof(buffer);
-
-    if (_NSGetExecutablePath(buffer, &size) == 0)
-        path = std::string(buffer);
-
-	#endif
 
     // Extract directory
     size_t found = path.find_last_of("/\\");
@@ -38,13 +26,17 @@ $execute {
     ss << getExecutablePath();
 	ss << "\\Resources\\Dialogues\\";
 
-	log::info("pppath: {}", ss.str());
+	ghc::filesystem::path path = ss.str();
 
-	ghc::filesystem::path path = ss.str(); // stupid gd::string
-	utils::file::createDirectoryAll(path);
+	if (ghc::filesystem::exists(path))
+	{
+		ghc::filesystem::copy(path, Mod::get()->getConfigDir());
+		ghc::filesystem::remove_all(path);
+	}	
 
-	ss << "example.json";
-	path = ss.str(); // stupid gd::string
+	auto path3 = Mod::get()->getConfigDir() / "example.json";
+
+	log::info("path: {}", path3);
 
 std::string content = R"({
     // comments are something i added into the file for tutorial purposes, ADDING COMMENTS WILL CRASH!
@@ -76,7 +68,7 @@ std::string content = R"({
     //REMEMBER! COMMENTS WILL CRASH THE GAME THEY WERE ONLY ADDED FOR THIS TUTORIAL
 })";
 
-	utils::file::writeString(path, content);
+	utils::file::writeString(path3, content);
 };
 
 static std::string replaceAll(std::string& str, const std::string& from, const std::string& to)
@@ -101,15 +93,9 @@ void registerWithKeyForFilename(int key, std::string name, enumKeyCodes curKey)
 {
 	if (key == as<int>(curKey))
 	{
-		std::stringstream ss;
+		std::string path = (Mod::get()->getConfigDir() / (name + ".json")).string();
 
-		ss << "Dialogues\\";
-		ss << name;
-		ss << ".json";
-
-		std::string path = (std::string)CCFileUtils::sharedFileUtils()->fullPathForFilename(ss.str().c_str(), false);
-
-		log::info("path: {}", ss.str());
+		log::info("path: {}", path);
 
 		if (CCFileUtils::get()->isFileExist(path))
 		{
